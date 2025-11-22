@@ -495,8 +495,6 @@ if [[ -n "$ADD_FILE_SOURCES" ]]; then
 	done
 fi
 
-VOLUME_NAME=$(basename $MOUNT_DIR)
-
 # Run AppleScript to do all the Finder cosmetic stuff
 APPLESCRIPT_FILE=$(mktemp -t createdmg.tmp.XXXXXXXXXX)
 if [[ $SANDBOX_SAFE -eq 1 ]]; then
@@ -519,9 +517,14 @@ else
 		echo "Will sleep for $ERROR_1728_WORKAROUND_SLEEP_INTERVAL seconds to workaround occasions \"Can't get disk (-1728)\" issues..."
 		sleep $ERROR_1728_WORKAROUND_SLEEP_INTERVAL
 
-		echo "Running AppleScript to make Finder stuff pretty: /usr/bin/osascript \"${APPLESCRIPT_FILE}\" \"${VOLUME_NAME}\""
-		if /usr/bin/osascript "${APPLESCRIPT_FILE}" "${VOLUME_NAME}"; then
+		echo "Running AppleScript to make Finder stuff pretty..."
+		if (set -x; /usr/bin/osascript "${APPLESCRIPT_FILE}" "$MOUNT_DIR" "$(basename $MOUNT_DIR)"); then
 			# Okay, we're cool
+			true
+		elif (set -x; /usr/bin/osascript "${APPLESCRIPT_FILE}" "$MOUNT_DIR" "$(basename "$DMG_NAME" .dmg)"); then
+			# For Mac OS X 10.6 (Snow Leopard), but also works on other versions.
+			# Note: Sometimes we might mount disks with the same name. The operating system
+			#   seems to know which one was recently mounted, so it won't select the wrong one.
 			true
 		else
 			echo >&2 "Failed running AppleScript"
